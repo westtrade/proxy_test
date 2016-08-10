@@ -19,7 +19,7 @@ func panicWrapper(err error) {
 func initConfig() (string, string, string) {
 
 	target := flag.String("target", "http://habrahabr.ru/", "proxy target")
-	search := flag.String("search", "", "Searched sentence")
+	search := flag.String("search", "", "Seeking sentence")
 	replace := flag.String("replace", "", "Replace sentence")
 
 	flag.Parse()
