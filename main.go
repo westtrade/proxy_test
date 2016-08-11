@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"flag"
 	"fmt"
 	"io/ioutil"
@@ -19,7 +20,7 @@ func panicWrapper(err error) {
 	}
 }
 
-func initConfig() (string, string, string) {
+func initConfig() (string, []byte, []byte) {
 
 	target := flag.String("target", "http://habrahabr.ru/", "Proxy target")
 	search := flag.String("search", "", "Seeking sentence")
@@ -27,18 +28,18 @@ func initConfig() (string, string, string) {
 
 	flag.Parse()
 
-	return *target, *search, *replace
+	return *target, []byte(*search), []byte(*replace)
 }
 
-func getRequestString(targetLink string) string {
+func getMirrorData(targetLink string) ([]byte, http.Header) {
 
 	resp, err := http.Get(targetLink)
 	panicWrapper(err)
 	defer resp.Body.Close()
 	bodyData, err := ioutil.ReadAll(resp.Body)
+
 	panicWrapper(err)
-	result := string(bodyData)
-	return result
+	return bodyData, resp.Header
 }
 
 func main() {
@@ -50,10 +51,12 @@ func main() {
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 
 		outsidePath := "http://" + path.Clean(strings.Replace(target, "http://", "", 1)+r.URL.Path)
-		result := getRequestString(outsidePath)
-		result = strings.Replace(result, search, replace, -1)
+		bodyData, reqHeaders := getMirrorData(outsidePath)
 
-		fmt.Fprint(w, result)
+		w.Header().Add("Content-Type", reqHeaders.Get("Content-Type"))
+		bodyData = bytes.Replace(bodyData, search, replace, -1)
+		w.Write(bodyData)
+
 	})
 
 	fmt.Printf(`
